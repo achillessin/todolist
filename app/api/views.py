@@ -17,22 +17,16 @@ def get_todolist(todolist_id):
 
 
 @api.route("/todolist/", methods=["POST"])
-def add_todolist():
+def create_todolist():
     try:
         todolist = TodoList(title=request.json.get("title")).save()
         return todolist.to_dict(), 201
-    except:
-        abort(400)
-
-
-@api.route("/todolist/<int:todolist_id>/tasks/")
-def get_todolist_todos(todolist_id):
-    todolist = TodoList.query.get_or_404(todolist_id)
-    return {"todos": [todo.to_dict() for todo in todolist.todos]}
+    except Exception as e:
+        return str(e), 500
 
 
 @api.route("/todolist/<int:todolist_id>/task", methods=["POST"])
-def add_todolist_todo(todolist_id):
+def create_todolist_task(todolist_id):
     todolist = TodoList.query.get_or_404(todolist_id)
     try:
         todo = TodoTask(
@@ -42,18 +36,18 @@ def add_todolist_todo(todolist_id):
             due_at=request.json.get("due_at")
         ).save()
         return todo.to_dict(), 201
-    except:
-        abort(500) # todo better error message
+    except Exception as e:
+        return str(e), 500
 
 
-@api.route("/todolist/<int:todolist_id>/todo/<int:task_id>/")
-def get_todo(todolist_id, task_id):
+@api.route("/todolist/<int:todolist_id>/task/<int:task_id>/")
+def get_task(todolist_id, task_id):
     todo = TodoTask.query.get_or_404(task_id)
     return todo.to_dict(), 201
 
 
-@api.route("/todolist/<int:todolist_id>/todo/<int:task_id>/", methods=["PUT"])
-def update_todo_status(todolist_id, task_id):
+@api.route("/todolist/<int:todolist_id>/task/<int:task_id>/", methods=["PUT"])
+def update_task(todolist_id, task_id):
     todo = TodoTask.query.get_or_404(task_id)
     try:
         todo.title = request.json.get("title")
@@ -89,8 +83,8 @@ def delete_todolist(todolist_id):
         abort(500)
 
 
-@api.route("/todo/<int:task_id>/", methods=["DELETE"])
-def delete_todo(task_id):
+@api.route("/todolist/<int:todolist_id>/task/<int:task_id>/", methods=["DELETE"])
+def delete_task(todolist_id, task_id):
     todo = TodoTask.query.get_or_404(task_id)
     try:
         if task_id == request.json.get("task_id"):

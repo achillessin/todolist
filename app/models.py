@@ -1,4 +1,5 @@
 from datetime import datetime
+from dateutil import parser
 import enum
 from sqlalchemy.orm import synonym
 
@@ -9,8 +10,9 @@ class Base:
     def commit(self):
         try:
             db.session.commit()
-        except Exception:
+        except Exception as e:
             db.session.rollback()
+            raise e
 
     def update(self, attrs_dict):
         for key, value in attrs_dict.iteritems():
@@ -31,7 +33,7 @@ class Base:
 
 class TodoList(db.Model, Base):
     __tablename__ = "todo_list"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     _title = db.Column("title", db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, default=None)
@@ -46,7 +48,7 @@ class TodoList(db.Model, Base):
 
     @title.setter # todo use a validate instead
     def title(self, title):
-        if not len(title, 128):
+        if not len(title) <= 128:
             raise ValueError(f"{title} is not a valid title")
         self._title = title
 
@@ -54,9 +56,9 @@ class TodoList(db.Model, Base):
 
     def to_dict(self):
         return {
+            "id": self.id,
             "title": self.title,
             "created_at": self.created_at,
-            "deleted_at": self.deleted_at,
             "todo_tasks": [todo.to_dict() for todo in self.todo_tasks],
         }
 
@@ -68,12 +70,12 @@ class TaskStatus(enum.Enum):
 
 class TodoTask(db.Model, Base):
     __tablename__ = "todo_task"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(64)) # todo: why?
     description = db.Column(db.String(128)) #todo: why? how to control size on UI
-    status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING.value, server_default=TaskStatus.PENDING.value)
+    status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING.name)
     todo_list_id = db.Column(db.Integer, db.ForeignKey("todo_list.id"))
-    due_at = db.Column(db.DateTime, default=None)
+    _due_at = db.Column("due_at", db.DateTime, default=None)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, default=None)
 
@@ -83,12 +85,27 @@ class TodoTask(db.Model, Base):
         self.todo_list_id = todo_list_id
         self.due_at = due_at
 
+    @property
+    def due_at(self):
+        return self._due_at
+
+    @due_at.setter
+    def due_at(self, val):
+        if isinstance(val, datetime):
+            self._due_at = val
+        elif isinstance(val, str):
+            self._due_at = parser.parse(val)
+        else:
+            raise NotImplementedError
+
+    due_at = synonym("_due_at", descriptor=due_at)  # todo: another way to declare
+
     def to_dict(self):
         return {
             'id': self.id,
             'title': self.title,
             'description': self.description,
-            'status': self.status.value,
+            'status': self.status.name,
             'todo_list_id': self.todo_list_id,
             'created_at': self.created_at,
             'due_at': self.due_at,
