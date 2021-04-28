@@ -1,0 +1,16 @@
+commands
+virtualenv --python=python3 env
+source ./env/bin/activate
+pip freeze > requirements.txt
+
+# run server
+FLASK_APP=server.py flask run
+
+# setup db
+FLASK_APP=server.py flask db init
+
+# migrate alembic
+FLASK_APP=server.py flask db migrate
+
+# update db
+FLASK_APP=server.py flask db upgrade
