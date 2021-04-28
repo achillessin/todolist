@@ -66,4 +66,8 @@ response = requests.request("DELETE", url, headers=headers, data=payload)
 print(response.text)
 
 # Get All Pending Tasks
-
+url = "localhost:5000/api/todolist/1/task/pending"
+payload={}
+headers = {}
+response = requests.request("GET", url, headers=headers, data=payload)
+print(response.text)

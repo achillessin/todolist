@@ -1,7 +1,8 @@
 from flask import abort, request
+import json
 
 from app.api import api
-from app.models import TodoList, TodoTask
+from app.models import TodoList, TodoTask, TaskStatus
 
 
 @api.route("/todolists/")
@@ -95,5 +96,15 @@ def delete_task(todolist_id, task_id):
             return todo.to_dict(), 201
         else:
             abort(500)
+    except:
+        abort(500)
+
+
+@api.route("/todolist/<int:todolist_id>/task/pending", methods=["GET"])
+def get_pending_tasks(todolist_id):
+    todolist = TodoList.query.get_or_404(todolist_id)
+    try:
+        tasks = TodoTask.query.filter((TodoTask.status == TaskStatus.PENDING.name) & (TodoTask.todo_list_id == todolist_id)).all()
+        return {'tasks': [task.to_dict() for task in tasks]}, 201
     except:
         abort(500)
