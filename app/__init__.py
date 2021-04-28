@@ -7,9 +7,6 @@ from config import config
 db = SQLAlchemy()
 migrate = Migrate()
 
-# todo: how to access from config
-# todo: how to change port
-
 
 def create_app(config_name):
     app = Flask(__name__)
