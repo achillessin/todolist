@@ -53,14 +53,15 @@ def update_task(todolist_id, task_id):
         todo.title = request.json.get("title")
         todo.description = request.json.get("description")
         todo.due_at = request.json.get("due_at")
-        todo.save()
-    except:
-        abort(500)
+        todo.status = request.json.get("status")
+        todo = todo.save()
+    except Exception as e:
+        return str(e), 500
     return todo.to_dict(), 201
 
 
 @api.route("/todolist/<int:todolist_id>/", methods=["PUT"])
-def change_todolist_title(todolist_id):
+def update_todolist(todolist_id):
     todolist = TodoList.query.get_or_404(todolist_id)
     try:
         todolist.title = request.json.get("title")
@@ -75,6 +76,8 @@ def delete_todolist(todolist_id):
     todolist = TodoList.query.get_or_404(todolist_id)
     try:
         if todolist_id == request.json.get("todolist_id"):
+            for task in todolist.todo_tasks:
+                task.delete()
             todolist.delete()
             return todolist.to_dict(), 201
         else:

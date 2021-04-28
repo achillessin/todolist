@@ -36,7 +36,6 @@ class TodoList(db.Model, Base):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     _title = db.Column("title", db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    deleted_at = db.Column(db.DateTime, default=None)
     todo_tasks = db.relationship("TodoTask", backref="todo_list", lazy="dynamic")
 
     def __init__(self, title=None):
@@ -46,7 +45,7 @@ class TodoList(db.Model, Base):
     def title(self):
         return self._title
 
-    @title.setter # todo use a validate instead
+    @title.setter
     def title(self, title):
         if not len(title) <= 128:
             raise ValueError(f"{title} is not a valid title")
@@ -73,11 +72,10 @@ class TodoTask(db.Model, Base):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(64)) # todo: why?
     description = db.Column(db.String(128)) #todo: why? how to control size on UI
-    status = db.Column(db.Enum(TaskStatus), default=TaskStatus.PENDING.name)
+    _status = db.Column("status", db.Enum(TaskStatus), default=TaskStatus.PENDING.name)
     todo_list_id = db.Column(db.Integer, db.ForeignKey("todo_list.id"))
     _due_at = db.Column("due_at", db.DateTime, default=None)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    deleted_at = db.Column(db.DateTime, default=None)
 
     def __init__(self, title, description, todo_list_id, due_at):
         self.title = title
@@ -100,12 +98,30 @@ class TodoTask(db.Model, Base):
 
     due_at = synonym("_due_at", descriptor=due_at)  # todo: another way to declare
 
+    @property
+    def status(self):
+        if self._status:
+            return self._status.name
+        else:
+            return TaskStatus.PENDING.name
+
+    @status.setter
+    def status(self, val):
+        if val == TaskStatus.PENDING.name:
+            self._status = TaskStatus.PENDING.name
+        elif val == TaskStatus.DONE.name:
+            self._status = TaskStatus.DONE.name
+        else:
+            raise NotImplementedError
+
+    status = synonym("_status", descriptor=status)  # todo: another way to declare
+
     def to_dict(self):
         return {
             'id': self.id,
             'title': self.title,
             'description': self.description,
-            'status': self.status.name,
+            'status': self.status,
             'todo_list_id': self.todo_list_id,
             'created_at': self.created_at,
             'due_at': self.due_at,
