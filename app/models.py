@@ -1,7 +1,7 @@
 from datetime import datetime
 from dateutil import parser
 import enum
-from sqlalchemy.orm import synonym
+from sqlalchemy.orm import synonym, validates
 
 from app import db
 
@@ -34,24 +34,17 @@ class Base:
 class TodoList(db.Model, Base):
     __tablename__ = "todo_list"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    _title = db.Column("title", db.String(128))
+    title = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     todo_tasks = db.relationship("TodoTask", backref="todo_list", lazy="dynamic")
 
     def __init__(self, title=None):
         self.title = title or "untitled"
 
-    @property
-    def title(self):
-        return self._title
-
-    @title.setter
-    def title(self, title):
-        if not len(title) <= 128:
-            raise ValueError(f"{title} is not a valid title")
-        self._title = title
-
-    title = synonym("_title", descriptor=title) # todo: another way to declare
+    @validates('title')
+    def validate_title_length(self, key, title):
+        assert len(title) <= 128
+        return title
 
     def to_dict(self):
         return {
@@ -70,8 +63,8 @@ class TaskStatus(enum.Enum):
 class TodoTask(db.Model, Base):
     __tablename__ = "todo_task"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    title = db.Column(db.String(64)) # todo: why?
-    description = db.Column(db.String(128)) #todo: why? how to control size on UI
+    title = db.Column(db.String(64))
+    description = db.Column(db.String(128))
     _status = db.Column("status", db.Enum(TaskStatus), default=TaskStatus.PENDING.name)
     todo_list_id = db.Column(db.Integer, db.ForeignKey("todo_list.id"))
     _due_at = db.Column("due_at", db.DateTime, default=None)
@@ -82,6 +75,16 @@ class TodoTask(db.Model, Base):
         self.description = description
         self.todo_list_id = todo_list_id
         self.due_at = due_at
+
+    @validates('title')
+    def validate_title_length(self, key, title):
+        assert len(title) <= 64
+        return title
+
+    @validates('description')
+    def validate_description_length(self, key, description):
+        assert len(description) <= 128
+        return description
 
     @property
     def due_at(self):
